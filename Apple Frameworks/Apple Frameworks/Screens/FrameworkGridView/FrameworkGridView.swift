@@ -4,31 +4,20 @@ struct FrameworkGridView: View {
     
     @StateObject private var viewModel = FrameworkGridViewModel()
     
-    let columns: [GridItem] = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-    
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns) {
+                LazyVGrid(columns: viewModel.columns) {
                     ForEach(MockData.frameworks) { framework in
-                        FrameworkTitleView(framework: framework)
-                            .onTapGesture {
-                                viewModel.selectedFramework = framework
-                            }
+                        NavigationLink(value: framework) {
+                            FrameworkTitleView(framework: framework)
+                        }
                     }
                 }
             }
             .navigationTitle("🍎 Frameworks")
-            .sheet(isPresented: $viewModel.isShowingDetail) {
-                if let framework = viewModel.selectedFramework {
-                    FrameworkDetailView(framework: framework,
-                                        isComingFromGridView: true,
-                                        isShowingDetailView: $viewModel.isShowingDetail)
-                }
+            .navigationDestination(for: Framework.self) { framework in
+                FrameworkDetailView(framework: framework)
             }
         }
     }

@@ -3,29 +3,17 @@ import SwiftUI
 struct FrameworkDetailView: View {
     let framework: Framework
     
-    let isComingFromGridView: Bool
-    @Binding var isShowingDetailView: Bool
     @State private var isShowingSafariView = false
     
     var body: some View {
         VStack {
-            if isComingFromGridView == true {
-                XDismissButtonView(isDismissButtonClicked: $isShowingDetailView)
-            }
-            
             FrameworkTitleView(framework: framework)
             
             Text(framework.description)
                 .font(.body)
                 .padding()
             
-            Spacer()
-            
             LearnMoreButtonView(isShowingSafariView: $isShowingSafariView)
-            
-            if isComingFromGridView == false {
-                Spacer()
-            }
         }
         .sheet(isPresented: $isShowingSafariView) {
             if let url = URL(string: framework.urlString) {
@@ -59,8 +47,6 @@ struct LearnMoreButtonView: View {
 }
 
 #Preview {
-    FrameworkDetailView(framework: MockData.frameworks[0],
-                        isComingFromGridView: false,
-                        isShowingDetailView: .constant(false))
-    .preferredColorScheme(.dark)
+    FrameworkDetailView(framework: MockData.frameworks[0])
+        .preferredColorScheme(.dark)
 }

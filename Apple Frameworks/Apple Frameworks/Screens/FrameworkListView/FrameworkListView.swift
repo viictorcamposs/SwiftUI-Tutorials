@@ -7,9 +7,7 @@ struct FrameworkListView: View {
         NavigationView {
             List(MockData.frameworks) { framework in
                 NavigationLink {
-                    FrameworkDetailView(framework: framework,
-                                        isComingFromGridView: false,
-                                        isShowingDetailView: $viewModel.isShowingDetail)
+                    FrameworkDetailView(framework: framework)
                 } label: {
                     FrameworkListRowView(framework: framework)
                 }
@@ -22,4 +20,5 @@ struct FrameworkListView: View {
 
 #Preview {
     FrameworkListView()
+        .preferredColorScheme(.dark)
 }
