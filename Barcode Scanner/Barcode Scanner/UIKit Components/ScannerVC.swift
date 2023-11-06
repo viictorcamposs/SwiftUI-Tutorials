@@ -1,17 +1,23 @@
 import UIKit
 import AVFoundation
 
-protocol ScannerViewControllerDelegate: AnyObject {
-    func didFindBarcode(barcode: String)
+enum CameraError: String {
+    case invalidDeviceInput     = "Something went wrong with the camera. We're unable to capture the input."
+    case invalidScannedValue    = "Invalid scanned value. This app scans EAN-8 and EAN-13."
 }
 
-final class ScannerViewController: UIViewController {
+protocol ScannerVCDelegate: AnyObject {
+    func didFindBarcode(barcode: String)
+    func didSurface(error: CameraError)
+}
+
+final class ScannerVC: UIViewController {
     
     let captureSession = AVCaptureSession()
     var previewLayer: AVCaptureVideoPreviewLayer?
-    weak var scannerDelegate: ScannerViewControllerDelegate?
+    weak var scannerDelegate: ScannerVCDelegate?
     
-    init(delegate: ScannerViewControllerDelegate) {
+    init(delegate: ScannerVCDelegate) {
         super.init(nibName: nil, bundle: nil)
         
         self.scannerDelegate = delegate
@@ -21,23 +27,42 @@ final class ScannerViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupCaptureSession()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        guard let previewLayer = previewLayer else {
+            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            return
+        }
+        
+        previewLayer.frame = view.layer.bounds
+    }
+    
     private func setupCaptureSession() {
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            return
         }
         
         let videoInput: AVCaptureDeviceInput
         
         do {
-            try videoInput = AVCaptureDeviceInput(device: videoCaptureDevice)
+            videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
         } catch {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            return
         }
         
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         } else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            return
         }
         
         let metaDataOutput = AVCaptureMetadataOutput()
@@ -48,7 +73,8 @@ final class ScannerViewController: UIViewController {
             metaDataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
             metaDataOutput.metadataObjectTypes = [.ean8, .ean13]
         } else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            return
         }
         
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -62,19 +88,22 @@ final class ScannerViewController: UIViewController {
 
 // MARK: - AVCaptureMetadataOutputObjectsDelegate
 
-extension ScannerViewController: AVCaptureMetadataOutputObjectsDelegate {
+extension ScannerVC: AVCaptureMetadataOutputObjectsDelegate {
     
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         guard let object = metadataObjects.first else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            return
         }
         
         guard let machineReadableObject = object as? AVMetadataMachineReadableCodeObject else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            return
         }
         
         guard let barcode = machineReadableObject.stringValue else {
-            return // error handling
+            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            return
         }
         
         scannerDelegate?.didFindBarcode(barcode: barcode)
